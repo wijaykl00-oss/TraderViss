@@ -31,8 +31,8 @@ export default function App() {
                 email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
                 displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
                 photoURL: currentUser.photoURL,
-                balance: 200000, 
-                hasClaimedBonus: true,
+                balance: 0, 
+                hasClaimedBonus: false,
                 totalDeposited: 0,
                 createdAt: new Date().toISOString()
               });

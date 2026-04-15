@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Wallet, TrendingUp, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, Activity, Gift } from 'lucide-react';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from './firebase';
 
 // Generate mock real-time data
 const generateData = () => {
@@ -22,6 +24,7 @@ const generateData = () => {
 export default function DashboardHome({ userData }: { userData: any }) {
   const [data, setData] = useState(generateData());
   const currentPrice = data[data.length - 1].price;
+  const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -41,14 +44,55 @@ export default function DashboardHome({ userData }: { userData: any }) {
     return () => clearInterval(interval);
   }, []);
 
+  const handleClaimBonus = async () => {
+    if (!userData?.uid) return;
+    setClaiming(true);
+    try {
+      const userRef = doc(db, 'users', userData.uid);
+      await updateDoc(userRef, {
+        balance: increment(200000),
+        hasClaimedBonus: true
+      });
+    } catch (error) {
+      console.error("Gagal klaim bonus:", error);
+      alert("Gagal mengklaim bonus, coba beberapa saat lagi.");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const showClaimBanner = userData !== null && userData?.hasClaimedBonus === false;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
       </div>
 
+      {showClaimBanner && (
+        <div className="w-full bg-gradient-to-r from-gold-600/20 to-gold-400/10 border border-gold-500/30 rounded-xl p-6 glass-card relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-400/10 blur-2xl rounded-full pointer-events-none"></div>
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gold-500/20 rounded-xl border border-gold-400/30">
+              <Gift size={28} className="text-gold-300" />
+            </div>
+            <div>
+              <h3 className="text-lg md:text-xl font-bold text-white gold-glow-text">Hadiah Pengguna Baru</h3>
+              <p className="text-gray-300 text-sm">Klaim modal trading awal Rp 200.000 sekarang juga!</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleClaimBonus}
+            disabled={claiming}
+            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-gold-600 to-gold-400 text-dark-900 font-bold rounded-lg hover:from-gold-500 hover:to-gold-300 transition-all shadow-[0_0_15px_rgba(202,138,4,0.4)] disabled:opacity-50"
+          >
+            {claiming ? 'Memproses Klaim...' : 'Klaim Rp 200.000'}
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 flex flex-col justify-between overflow-hidden">
+        <div className="glass-card p-6 flex flex-col justify-between overflow-hidden relative group">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-400 font-medium whitespace-nowrap">Total Saldo</h3>
             <div className="p-2 bg-gold-500/20 rounded-lg shrink-0">

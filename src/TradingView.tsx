@@ -54,6 +54,15 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     return () => unsubscribe();
   }, [user]);
 
+  // Calculate floating profit with 500x leverage for excitement
+  const getLiveProfit = (trade: any) => {
+    if (trade.status === 'closed') return trade.profit;
+    const isBuy = trade.type === 'buy';
+    const diff = isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice;
+    const percentage = diff / trade.entryPrice;
+    return Math.round(trade.amount * percentage * 500); 
+  };
+
   // Handle auto-closing trades after 1 minute
   useEffect(() => {
     const openTrades = trades.filter(t => t.status === 'open');
@@ -64,10 +73,8 @@ export default function TradingView({ user, userData }: { user: any, userData: a
       openTrades.forEach(async (trade) => {
         const tradeTime = new Date(trade.createdAt).getTime();
         if (now - tradeTime >= 60000) { // 1 minute
-          // Close trade
-          const isWin = trade.type === 'buy' ? currentPrice > trade.entryPrice : currentPrice < trade.entryPrice;
-          const profitPercent = isWin ? 0.8 : -1; // 80% profit or 100% loss
-          const profitAmount = trade.amount * profitPercent;
+          // Close trade at current floating profit
+          const profitAmount = getLiveProfit(trade);
           
           try {
             await updateDoc(doc(db, 'trades', trade.id), {
@@ -260,8 +267,8 @@ export default function TradingView({ user, userData }: { user: any, userData: a
                         </span>
                       )}
                     </td>
-                    <td className={`py-4 text-right font-bold ${trade.status === 'open' ? 'text-gray-500' : trade.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {trade.status === 'open' ? '-' : `${trade.profit > 0 ? '+' : ''}Rp ${trade.profit.toLocaleString('id-ID')}`}
+                    <td className={`py-4 text-right font-bold ${getLiveProfit(trade) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {getLiveProfit(trade) > 0 ? '+' : ''}Rp {getLiveProfit(trade).toLocaleString('id-ID')}
                     </td>
                   </tr>
                 ))

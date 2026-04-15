@@ -63,41 +63,27 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     return Math.round(trade.amount * percentage * 500); 
   };
 
-  // Handle auto-closing trades after 1 minute
-  useEffect(() => {
-    const openTrades = trades.filter(t => t.status === 'open');
-    if (openTrades.length === 0) return;
-
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      openTrades.forEach(async (trade) => {
-        const tradeTime = new Date(trade.createdAt).getTime();
-        if (now - tradeTime >= 60000) { // 1 minute
-          // Close trade at current floating profit
-          const profitAmount = getLiveProfit(trade);
-          
-          try {
-            await updateDoc(doc(db, 'trades', trade.id), {
-              status: 'closed',
-              exitPrice: currentPrice,
-              profit: profitAmount,
-              closedAt: new Date().toISOString()
-            });
-
-            // Update user balance
-            const newBalance = userData.balance + (trade.amount + profitAmount);
-            await updateDoc(doc(db, 'users', user.uid), {
-              balance: newBalance
-            });
-          } catch (error) {
-            console.error("Error closing trade", error);
-          }
-        }
+  const handleCloseTrade = async (trade: any) => {
+    setLoading(true);
+    const profitAmount = getLiveProfit(trade);
+    try {
+      await updateDoc(doc(db, 'trades', trade.id), {
+        status: 'closed',
+        exitPrice: currentPrice,
+        profit: profitAmount,
+        closedAt: new Date().toISOString()
       });
-    }, 1000);
 
-    return () => clearInterval(interval);
-  }, [trades, currentPrice, userData, user]);
+      // Update user balance
+      const newBalance = userData.balance + (trade.amount + profitAmount);
+      await updateDoc(doc(db, 'users', user.uid), {
+        balance: newBalance
+      });
+    } catch (error) {
+      console.error("Error closing trade", error);
+    }
+    setLoading(false);
+  };
 
   const handleTrade = async (type: 'buy' | 'sell') => {
     const tradeAmount = Number(amount);
@@ -135,7 +121,7 @@ export default function TradingView({ user, userData }: { user: any, userData: a
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">Live Trading (1 Menit)</h2>
+      <h2 className="text-2xl font-bold text-white">Live Trading (Spot)</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart Area */}
@@ -167,8 +153,16 @@ export default function TradingView({ user, userData }: { user: any, userData: a
           <h3 className="text-lg font-medium text-white mb-6">Order Entry</h3>
           
           <div className="mb-6 p-4 bg-dark-900 rounded-lg border border-gold-500/20">
-            <p className="text-sm text-gray-400 mb-1">Saldo Tersedia</p>
-            <p className="text-xl font-bold text-white">Rp {userData?.balance?.toLocaleString('id-ID') || 0}</p>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm text-gray-400">Saldo Utama</p>
+              <p className="text-lg font-bold text-white">Rp {userData?.balance?.toLocaleString('id-ID') || 0}</p>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-gold-500/10">
+              <p className="text-sm text-gray-400">Saldo di Trading</p>
+              <p className="text-lg font-bold text-gold-300">
+                Rp {trades.filter(t => t.status === 'open').reduce((sum, t) => sum + t.amount + getLiveProfit(t), 0).toLocaleString('id-ID')}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-4 mb-8">
@@ -258,9 +252,13 @@ export default function TradingView({ user, userData }: { user: any, userData: a
                     </td>
                     <td className="py-4">
                       {trade.status === 'open' ? (
-                        <span className="flex items-center gap-1 text-gold-400 text-xs">
-                          <Clock size={12} /> Berjalan
-                        </span>
+                        <button 
+                          onClick={() => handleCloseTrade(trade)}
+                          disabled={loading}
+                          className="px-3 py-1.5 bg-red-500/20 text-red-400 font-bold border border-red-500/50 rounded hover:bg-red-500/40 transition-colors text-xs flex items-center gap-1"
+                        >
+                          Tutup (Sell)
+                        </button>
                       ) : (
                         <span className="flex items-center gap-1 text-gray-400 text-xs">
                           <CheckCircle2 size={12} /> Selesai

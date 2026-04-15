@@ -90,7 +90,7 @@ export default function Dashboard({ user }: { user: any }) {
         
         <div className="relative z-10 max-w-6xl mx-auto">
           <Routes>
-            <Route path="/" element={<DashboardHome userData={userData} />} />
+            <Route path="/" element={<DashboardHome user={user} userData={userData} />} />
             <Route path="/trade" element={<TradingView user={user} userData={userData} />} />
             <Route path="/deposit" element={<DepositView user={user} />} />
             <Route path="/withdraw" element={<WithdrawView user={user} userData={userData} />} />

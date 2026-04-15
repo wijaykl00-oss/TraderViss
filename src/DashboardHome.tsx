@@ -21,7 +21,7 @@ const generateData = () => {
   return data;
 };
 
-export default function DashboardHome({ userData }: { userData: any }) {
+export default function DashboardHome({ user, userData }: { user: any, userData: any }) {
   const [data, setData] = useState(generateData());
   const currentPrice = data[data.length - 1].price;
   const [claiming, setClaiming] = useState(false);
@@ -45,14 +45,16 @@ export default function DashboardHome({ userData }: { userData: any }) {
   }, []);
 
   const handleClaimBonus = async () => {
-    if (!userData?.uid) return;
+    const targetUid = userData?.uid || user?.uid;
+    if (!targetUid) return;
     setClaiming(true);
     try {
-      const userRef = doc(db, 'users', userData.uid);
+      const userRef = doc(db, 'users', targetUid);
       await updateDoc(userRef, {
         balance: increment(200000),
         hasClaimedBonus: true
       });
+      // Try to fallback setting directly if doesn't exist
     } catch (error) {
       console.error("Gagal klaim bonus:", error);
       alert("Gagal mengklaim bonus, coba beberapa saat lagi.");
@@ -61,7 +63,9 @@ export default function DashboardHome({ userData }: { userData: any }) {
     }
   };
 
-  const showClaimBanner = userData !== null && userData?.hasClaimedBonus === false;
+  // Show banner if userData doesn't exist (loading/error) OR explicitly hasn't claimed
+  // If they have > 0 balance and true, dont show.
+  const showClaimBanner = !userData || userData?.hasClaimedBonus === false;
 
   return (
     <div className="space-y-6">

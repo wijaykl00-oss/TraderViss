@@ -16,12 +16,12 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Show popup after a short delay, but only once
-    const hasSeenPopup = localStorage.getItem('hasSeenBonusPopup');
+    // Show popup after a short delay, but only once per visit (session)
+    const hasSeenPopup = sessionStorage.getItem('hasSeenBonusPopup');
     if (!hasSeenPopup) {
       const timer = setTimeout(() => {
         setShowPopup(true);
-        localStorage.setItem('hasSeenBonusPopup', 'true');
+        sessionStorage.setItem('hasSeenBonusPopup', 'true');
       }, 1000);
       return () => clearTimeout(timer);
     }

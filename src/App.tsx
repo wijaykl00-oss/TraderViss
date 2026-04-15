@@ -13,35 +13,37 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        try {
-          // Check if user exists in Firestore
-          const userRef = doc(db, 'users', currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (!userSnap.exists()) {
-            // Create new user profile
-            await setDoc(userRef, {
-              uid: currentUser.uid,
-              email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
-              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
-              photoURL: currentUser.photoURL,
-              balance: 200000, // Initial claim bonus
-              hasClaimedBonus: true,
-              totalDeposited: 0,
-              createdAt: new Date().toISOString()
-            });
-          }
-        } catch (error) {
-          console.error("Error setting up user in Firestore:", error);
-        }
-        
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      // Set user immediately so UI routes to dashboard instantly without waiting for Firestore
+      setUser(currentUser);
       setLoading(false);
+
+      if (currentUser) {
+        // Run Firestore init asynchronously in the background
+        const initFirestoreRecord = async () => {
+          try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+              await setDoc(userRef, {
+                uid: currentUser.uid,
+                email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
+                displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
+                photoURL: currentUser.photoURL,
+                balance: 200000, 
+                hasClaimedBonus: true,
+                totalDeposited: 0,
+                createdAt: new Date().toISOString()
+              });
+            }
+          } catch (error) {
+            console.error("Error setting up user in Firestore:", error);
+          }
+        };
+        
+        initFirestoreRecord();
+      }
     });
 
     return () => unsubscribe();

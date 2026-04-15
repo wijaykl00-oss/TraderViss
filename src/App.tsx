@@ -5,6 +5,8 @@ import { auth, db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import LandingPage from './LandingPage';
 import Dashboard from './Dashboard';
+import InfoPage from './InfoPage';
+import TestimonialPage from './TestimonialPage';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -22,7 +24,7 @@ export default function App() {
           await setDoc(userRef, {
             uid: currentUser.uid,
             email: currentUser.email,
-            displayName: currentUser.displayName,
+            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
             photoURL: currentUser.photoURL,
             balance: 200000, // Initial claim bonus
             hasClaimedBonus: true,
@@ -52,6 +54,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage />} />
+        <Route path="/info" element={<InfoPage />} />
+        <Route path="/testimonial" element={<TestimonialPage />} />
         <Route path="/dashboard/*" element={user ? <Dashboard user={user} /> : <Navigate to="/" />} />
       </Routes>
     </Router>

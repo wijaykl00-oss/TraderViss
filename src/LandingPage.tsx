@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { auth, signInWithGoogle } from './firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { Coins, LogIn, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { Coins, LogIn, User as UserIcon, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function LandingPage() {
   const [showPopup, setShowPopup] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Show popup after a short delay
@@ -27,18 +29,35 @@ export default function LandingPage() {
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleNicknameAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nickname || nickname.length < 3) {
+      setError("Nickname minimal 3 karakter");
+      return;
+    }
+    
     setError('');
     setLoading(true);
+    
+    // Convert nickname to a pseudo-email for Firebase Auth compatibility
+    const fakedEmail = `${nickname.toLowerCase().replace(/[^a-z0-9]/g, '')}@tradev.app`;
+
     try {
       if (isRegister) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const res = await createUserWithEmailAndPassword(auth, fakedEmail, password);
+        // Save their nickname as their displayName so it appears correctly in Dashboard
+        await updateProfile(res.user, { displayName: nickname });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, fakedEmail, password);
       }
     } catch (err: any) {
-      setError(err.message || "Gagal melakukan autentikasi");
+      let errorMessage = "Gagal melakukan autentikasi";
+      if (err.message.includes('email-already-in-use')) errorMessage = "Nickname sudah dipakai orang lain";
+      if (err.message.includes('wrong-password') || err.message.includes('invalid-credential')) errorMessage = "Nickname atau Password salah";
+      if (err.message.includes('user-not-found')) errorMessage = "Akun belum terdaftar";
+      if (err.message.includes('configuration-not-found')) errorMessage = "Sistem Error: Harap hubungi Admin atau pastikan Email/Password aktif di Console";
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,11 +77,18 @@ export default function LandingPage() {
         </div>
         
         <div className="hidden md:flex gap-4">
-          {['Home', 'About', 'Services', 'Testimonial'].map((item) => (
-            <div key={item} className="nav-menu-item">
-              <span className="nav-menu-text">{item}</span>
-            </div>
-          ))}
+          <Link to="/" className="nav-menu-item">
+            <span className="nav-menu-text">Home</span>
+          </Link>
+          <Link to="/info" className="nav-menu-item">
+            <span className="nav-menu-text">About</span>
+          </Link>
+          <Link to="/info" className="nav-menu-item">
+            <span className="nav-menu-text">Services</span>
+          </Link>
+          <Link to="/testimonial" className="nav-menu-item">
+            <span className="nav-menu-text">Testimonial</span>
+          </Link>
         </div>
 
         <button 
@@ -147,18 +173,18 @@ export default function LandingPage() {
                 </div>
               )}
 
-              <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
+              <form onSubmit={handleNicknameAuth} className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Email</label>
+                  <label className="block text-sm text-gray-400 mb-1">Nickname (Tanpa Spasi)</label>
                   <div className="relative">
-                    <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <UserIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                     <input 
-                      type="email" 
+                      type="text" 
                       required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value.replace(/\s+/g, ''))}
                       className="w-full bg-dark-900 border border-gold-500/30 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-gold-400 transition-colors"
-                      placeholder="email@example.com"
+                      placeholder="Misal: traderking99"
                     />
                   </div>
                 </div>

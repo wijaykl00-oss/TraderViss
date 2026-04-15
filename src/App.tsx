@@ -15,23 +15,28 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Check if user exists in Firestore
-        const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-          // Create new user profile
-          await setDoc(userRef, {
-            uid: currentUser.uid,
-            email: currentUser.email,
-            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
-            photoURL: currentUser.photoURL,
-            balance: 200000, // Initial claim bonus
-            hasClaimedBonus: true,
-            totalDeposited: 0,
-            createdAt: new Date().toISOString()
-          });
+        try {
+          // Check if user exists in Firestore
+          const userRef = doc(db, 'users', currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            // Create new user profile
+            await setDoc(userRef, {
+              uid: currentUser.uid,
+              email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
+              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
+              photoURL: currentUser.photoURL,
+              balance: 200000, // Initial claim bonus
+              hasClaimedBonus: true,
+              totalDeposited: 0,
+              createdAt: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          console.error("Error setting up user in Firestore:", error);
         }
+        
         setUser(currentUser);
       } else {
         setUser(null);

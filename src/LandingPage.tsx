@@ -16,9 +16,15 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Show popup after a short delay
-    const timer = setTimeout(() => setShowPopup(true), 1000);
-    return () => clearTimeout(timer);
+    // Show popup after a short delay, but only once
+    const hasSeenPopup = localStorage.getItem('hasSeenBonusPopup');
+    if (!hasSeenPopup) {
+      const timer = setTimeout(() => {
+        setShowPopup(true);
+        localStorage.setItem('hasSeenBonusPopup', 'true');
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const handleGoogleLogin = async () => {

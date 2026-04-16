@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Wallet, TrendingUp, Activity, Gift } from 'lucide-react';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, increment } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Generate mock real-time data
@@ -50,11 +50,10 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
     setClaiming(true);
     try {
       const userRef = doc(db, 'users', targetUid);
-      await updateDoc(userRef, {
+      await setDoc(userRef, {
         balance: increment(200000),
         hasClaimedBonus: true
-      });
-      // Try to fallback setting directly if doesn't exist
+      }, { merge: true });
     } catch (error) {
       console.error("Gagal klaim bonus:", error);
       alert("Gagal mengklaim bonus, coba beberapa saat lagi.");

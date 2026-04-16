@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from './firebase';
-import { collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Clock, CheckCircle2 } from 'lucide-react';
 
@@ -60,11 +60,15 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     const isBuy = trade.type === 'buy';
     const diff = isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice;
     const percentage = diff / trade.entryPrice;
-    return Math.round(trade.amount * percentage * 500); 
+    let profit = Math.round(trade.amount * percentage * 500); 
+    if (profit < -trade.amount) {
+      profit = -trade.amount;
+    }
+    return profit;
   };
 
-  const handleCloseTrade = async (trade: any) => {
-    setLoading(true);
+  const handleCloseTrade = async (trade: any, manageLoading = true) => {
+    if (manageLoading) setLoading(true);
     const profitAmount = getLiveProfit(trade);
     try {
       await updateDoc(doc(db, 'trades', trade.id), {
@@ -75,12 +79,28 @@ export default function TradingView({ user, userData }: { user: any, userData: a
       });
 
       // Update user balance
-      const newBalance = userData.balance + (trade.amount + profitAmount);
+      const returnBalance = trade.amount + profitAmount;
       await updateDoc(doc(db, 'users', user.uid), {
-        balance: newBalance
+        balance: increment(returnBalance)
       });
     } catch (error) {
       console.error("Error closing trade", error);
+    }
+    if (manageLoading) setLoading(false);
+  };
+
+  const handleSellAll = async () => {
+    const openTrades = trades.filter(t => t.status === 'open');
+    if (openTrades.length === 0) {
+      alert("Tidak ada saldo di trading untuk ditarik.");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await Promise.all(openTrades.map(trade => handleCloseTrade(trade, false)));
+    } catch (error) {
+      console.error(error);
     }
     setLoading(false);
   };
@@ -100,7 +120,7 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     try {
       // Deduct balance
       await updateDoc(doc(db, 'users', user.uid), {
-        balance: userData.balance - tradeAmount
+        balance: increment(-tradeAmount)
       });
 
       // Create trade
@@ -199,15 +219,15 @@ export default function TradingView({ user, userData }: { user: any, userData: a
               className="py-4 bg-green-500/20 text-green-400 border border-green-500/50 rounded-lg font-bold hover:bg-green-500/30 transition-colors flex flex-col items-center justify-center gap-1"
             >
               <TrendingUp size={20} />
-              BUY (Naik)
+              BUY (Investasi)
             </button>
             <button 
-              onClick={() => handleTrade('sell')}
-              disabled={loading}
-              className="py-4 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg font-bold hover:bg-red-500/30 transition-colors flex flex-col items-center justify-center gap-1"
+              onClick={handleSellAll}
+              disabled={loading || trades.filter(t => t.status === 'open').length === 0}
+              className="py-4 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg font-bold hover:bg-red-500/30 transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <TrendingDown size={20} />
-              SELL (Turun)
+              SELL (Tarik Saldo)
             </button>
           </div>
         </div>

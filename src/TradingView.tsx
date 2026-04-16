@@ -22,6 +22,7 @@ export default function TradingView({ user, userData }: { user: any, userData: a
   const [amount, setAmount] = useState<string>('10000');
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [orderTab, setOrderTab] = useState<'buy' | 'sell'>('buy');
   const currentPrice = data[data.length - 1].price;
 
   useEffect(() => {
@@ -172,66 +173,87 @@ export default function TradingView({ user, userData }: { user: any, userData: a
 
         {/* Trading Controls */}
         <div className="glass-card p-6 flex flex-col">
-          <h3 className="text-lg font-medium text-white mb-6">Order Entry</h3>
-          
+          <div className="flex border-b border-gold-500/20 mb-6">
+            <button 
+              onClick={() => setOrderTab('buy')}
+              className={`flex-1 py-3 text-center text-sm font-bold transition-colors ${orderTab === 'buy' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              Beli (Buy)
+            </button>
+            <button 
+              onClick={() => setOrderTab('sell')}
+              className={`flex-1 py-3 text-center text-sm font-bold transition-colors ${orderTab === 'sell' ? 'text-red-400 border-b-2 border-red-400' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              Jual (Sell)
+            </button>
+          </div>
+
           <div className="mb-6 p-4 bg-dark-900 rounded-lg border border-gold-500/20">
             <div className="flex justify-between items-center mb-2">
-              <p className="text-sm text-gray-400">Saldo Utama</p>
+              <p className="text-sm text-gray-400">Saldo Utama (IDR)</p>
               <p className="text-lg font-bold text-white">Rp {userData?.balance?.toLocaleString('id-ID') || 0}</p>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-gold-500/10">
-              <p className="text-sm text-gray-400">Saldo di Trading</p>
+              <p className="text-sm text-gray-400">Aset Trading (XAU)</p>
               <p className="text-lg font-bold text-gold-300">
                 Rp {trades.filter(t => t.status === 'open').reduce((sum, t) => sum + t.amount + getLiveProfit(t), 0).toLocaleString('id-ID')}
               </p>
             </div>
           </div>
 
-          <div className="space-y-4 mb-8">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Jumlah Investasi (Rp)</label>
-              <input 
-                type="number" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-dark-900 border border-gold-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gold-400"
-                placeholder="Min. 10000"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          {orderTab === 'buy' ? (
+            <>
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Jumlah Beli (Rp)</label>
+                  <input 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full bg-dark-900 border border-gold-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-gold-400"
+                    placeholder="Min. 10000"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setAmount((userData?.balance || 0).toString())}
+                    className="py-2 text-xs bg-dark-900 border border-gold-500/30 rounded text-gray-300 hover:text-gold-300"
+                  >
+                    MAX
+                  </button>
+                  <button 
+                    onClick={() => setAmount('50000')}
+                    className="py-2 text-xs bg-dark-900 border border-gold-500/30 rounded text-gray-300 hover:text-gold-300"
+                  >
+                    50.000
+                  </button>
+                </div>
+              </div>
               <button 
-                onClick={() => setAmount((userData?.balance || 0).toString())}
-                className="py-2 text-xs bg-dark-900 border border-gold-500/30 rounded text-gray-300 hover:text-gold-300"
+                onClick={() => handleTrade('buy')}
+                disabled={loading}
+                className="w-full py-4 bg-green-500/20 text-green-400 border border-green-500/50 rounded-lg font-bold hover:bg-green-500/30 transition-colors flex flex-col items-center justify-center gap-1 mt-auto"
               >
-                MAX
+                <TrendingUp size={20} />
+                BUY XAU
               </button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-4 mb-8 text-center py-4 text-gray-400 text-sm">
+                <p>Tarik seluruh dana Anda dari pasar trading (Jual XAU).</p>
+                <p>Harga penjualan akan menyesuaikan dengan grafik secara real-time.</p>
+              </div>
               <button 
-                onClick={() => setAmount('50000')}
-                className="py-2 text-xs bg-dark-900 border border-gold-500/30 rounded text-gray-300 hover:text-gold-300"
+                onClick={handleSellAll}
+                disabled={loading || trades.filter(t => t.status === 'open').length === 0}
+                className="w-full py-4 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg font-bold hover:bg-red-500/30 transition-colors flex flex-col items-center justify-center gap-1 mt-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                50.000
+                <TrendingDown size={20} />
+                SELL SEMUA XAU
               </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-auto">
-            <button 
-              onClick={() => handleTrade('buy')}
-              disabled={loading}
-              className="py-4 bg-green-500/20 text-green-400 border border-green-500/50 rounded-lg font-bold hover:bg-green-500/30 transition-colors flex flex-col items-center justify-center gap-1"
-            >
-              <TrendingUp size={20} />
-              BUY (Investasi)
-            </button>
-            <button 
-              onClick={handleSellAll}
-              disabled={loading || trades.filter(t => t.status === 'open').length === 0}
-              className="py-4 bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg font-bold hover:bg-red-500/30 transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <TrendingDown size={20} />
-              SELL (Tarik Saldo)
-            </button>
-          </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -98,7 +98,9 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     
     setLoading(true);
     try {
-      await Promise.all(openTrades.map(trade => handleCloseTrade(trade, false)));
+      for (const trade of openTrades) {
+        await handleCloseTrade(trade, false);
+      }
     } catch (error) {
       console.error(error);
     }

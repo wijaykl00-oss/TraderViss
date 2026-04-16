@@ -45,11 +45,12 @@ export default function TradingView({ user, userData }: { user: any, userData: a
     if (!user?.uid) return;
     const q = query(
       collection(db, 'trades'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const tradeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort locally to prevent requiring a Firestore composite index
+      tradeData.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setTrades(tradeData);
     });
     return () => unsubscribe();

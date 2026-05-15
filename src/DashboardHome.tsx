@@ -45,8 +45,16 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
   }, []);
 
   const handleClaimBonus = async () => {
+    // Priority: use userData.uid if it exists, otherwise fallback to user.uid
     const targetUid = userData?.uid || user?.uid;
     if (!targetUid) return;
+
+    // Prevent duplicate claims if userData is already loaded and shows true
+    if (userData?.hasClaimedBonus === true) {
+      alert("Anda sudah mengklaim bonus ini.");
+      return;
+    }
+
     setClaiming(true);
     try {
       const userRef = doc(db, 'users', targetUid);
@@ -62,9 +70,9 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
     }
   };
 
-  // Show banner if userData doesn't exist (loading/error) OR explicitly hasn't claimed
-  // If they have > 0 balance and true, dont show.
-  const showClaimBanner = !userData || userData?.hasClaimedBonus === false;
+  // Show banner ONLY if userData is loaded AND explicitly hasn't claimed yet
+  // This prevents the banner from flashing or causing race conditions while loading
+  const showClaimBanner = userData && userData?.hasClaimedBonus === false;
 
   return (
     <div className="space-y-6">

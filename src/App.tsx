@@ -35,7 +35,7 @@ export default function App() {
                 hasClaimedBonus: false,
                 totalDeposited: 0,
                 createdAt: new Date().toISOString()
-              });
+              }, { merge: true });
             }
           } catch (error) {
             console.error("Error setting up user in Firestore:", error);

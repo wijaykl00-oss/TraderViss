@@ -119,7 +119,7 @@ export default function DepositView({ user }: { user: any }) {
           <p className="text-sm text-gray-500 mb-8">untuk Nickname: <span className="text-gold-400">{nickname}</span></p>
 
           <div className="w-64 h-64 mx-auto bg-white rounded-xl p-4 mb-8 flex items-center justify-center border-4 border-gold-500/30 overflow-hidden shadow-[0_0_15px_rgba(202,138,4,0.3)]">
-            <img src="/qriss/qrisss.png" alt="QRIS" className="w-full h-full object-contain" />
+            <img src="/qriss/qrisbru.jpeg" alt="QRIS" className="w-full h-full object-contain" />
           </div>
 
           <div className="text-left space-y-6 max-w-sm mx-auto">

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, runTransaction } from 'firebase/firestore';
 import LandingPage from './LandingPage';
 import Dashboard from './Dashboard';
 import InfoPage from './InfoPage';
@@ -23,20 +23,29 @@ export default function App() {
         const initFirestoreRecord = async () => {
           try {
             const userRef = doc(db, 'users', currentUser.uid);
-            const userSnap = await getDoc(userRef);
             
-            if (!userSnap.exists()) {
-              await setDoc(userRef, {
-                uid: currentUser.uid,
-                email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
-                displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
-                photoURL: currentUser.photoURL,
-                balance: 0, 
-                hasClaimedBonus: false,
-                totalDeposited: 0,
-                createdAt: new Date().toISOString()
-              }, { merge: true });
-            }
+            await runTransaction(db, async (transaction) => {
+              const userSnap = await transaction.get(userRef);
+              
+              if (!userSnap.exists()) {
+                transaction.set(userRef, {
+                  uid: currentUser.uid,
+                  email: currentUser.email || `${currentUser.displayName || 'user'}@tradev.app`,
+                  displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
+                  photoURL: currentUser.photoURL,
+                  balance: 0, 
+                  hasClaimedBonus: false,
+                  totalDeposited: 0,
+                  createdAt: new Date().toISOString()
+                });
+              } else {
+                // If it exists, just update the basic profile info but don't touch balance/bonus
+                transaction.update(userRef, {
+                  displayName: currentUser.displayName || currentUser.email?.split('@')[0] || "Trader",
+                  photoURL: currentUser.photoURL,
+                });
+              }
+            });
           } catch (error) {
             console.error("Error setting up user in Firestore:", error);
           }

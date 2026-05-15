@@ -59,6 +59,7 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
     try {
       const userRef = doc(db, 'users', targetUid);
       await setDoc(userRef, {
+        uid: targetUid,
         balance: increment(200000),
         hasClaimedBonus: true
       }, { merge: true });

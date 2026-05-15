@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Wallet, TrendingUp, Activity, Gift } from 'lucide-react';
-import { doc, setDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, increment, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Generate mock real-time data
@@ -45,27 +45,50 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
   }, []);
 
   const handleClaimBonus = async () => {
-    // Priority: use userData.uid if it exists, otherwise fallback to user.uid
-    const targetUid = userData?.uid || user?.uid;
-    if (!targetUid) return;
-
-    // Prevent duplicate claims if userData is already loaded and shows true
-    if (userData?.hasClaimedBonus === true) {
-      alert("Anda sudah mengklaim bonus ini.");
-      return;
-    }
+    const authUid = user?.uid;
+    if (!authUid) return;
 
     setClaiming(true);
     try {
-      const userRef = doc(db, 'users', targetUid);
-      await setDoc(userRef, {
-        uid: targetUid,
-        balance: increment(200000),
-        hasClaimedBonus: true
-      }, { merge: true });
-    } catch (error) {
-      console.error("Gagal klaim bonus:", error);
-      alert("Gagal mengklaim bonus, coba beberapa saat lagi.");
+      const userRef = doc(db, 'users', authUid);
+      
+      await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          if (data.hasClaimedBonus === true) {
+            throw new Error("ALREADY_CLAIMED");
+          }
+          
+          // Use current balance if it's a number, otherwise 0
+          const currentBalance = typeof data.balance === 'number' ? data.balance : 0;
+          
+          transaction.update(userRef, {
+            balance: currentBalance + 200000,
+            hasClaimedBonus: true,
+            uid: authUid // Keep uid consistent with rules
+          });
+        } else {
+          // Create new doc if it doesn't exist
+          transaction.set(userRef, {
+            uid: authUid,
+            balance: 200000,
+            hasClaimedBonus: true,
+            totalDeposited: 0,
+            createdAt: new Date().toISOString()
+          });
+        }
+      });
+      
+      // Success will be reflected via onSnapshot in Dashboard
+    } catch (error: any) {
+      if (error.message === "ALREADY_CLAIMED") {
+        alert("Anda sudah mengklaim bonus ini.");
+      } else {
+        console.error("Gagal klaim bonus:", error);
+        alert("Gagal mengklaim bonus, coba beberapa saat lagi.");
+      }
     } finally {
       setClaiming(false);
     }

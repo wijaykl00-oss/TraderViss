@@ -46,21 +46,28 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
 
   const handleClaimBonus = async () => {
     const authUid = user?.uid;
-    if (!authUid) return;
+    if (!authUid) {
+      alert("Sesi berakhir, silakan login kembali.");
+      return;
+    }
 
     setClaiming(true);
     try {
       const userRef = doc(db, 'users', authUid);
       
+      // Try to get current balance from userData or fallback to 0
+      const currentBalance = userData?.balance || 0;
+      
       await setDoc(userRef, {
         uid: authUid,
-        balance: increment(200000),
+        balance: currentBalance + 200000,
         hasClaimedBonus: true
       }, { merge: true });
       
+      alert("Bonus Rp 200.000 berhasil diklaim!");
     } catch (error: any) {
       console.error("Gagal klaim bonus:", error);
-      alert("Gagal mengklaim bonus. Error: " + (error.code || error.message));
+      alert("Gagal mengklaim bonus. Pesan: " + (error.message || "Unknown error") + " (Code: " + (error.code || "no-code") + ")");
     } finally {
       setClaiming(false);
     }

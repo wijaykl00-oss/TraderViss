@@ -27,9 +27,7 @@ service cloud.firestore {
     // ===============================================================
     
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isOwner(userId) && request.resource.data.uid == userId;
+      allow read, write: if isOwner(userId);
     }
     
     match /trades/{tradeId} {

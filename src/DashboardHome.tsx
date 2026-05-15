@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Wallet, TrendingUp, Activity, Gift } from 'lucide-react';
-import { doc, setDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Generate mock real-time data
@@ -55,19 +55,25 @@ export default function DashboardHome({ user, userData }: { user: any, userData:
     try {
       const userRef = doc(db, 'users', authUid);
       
-      // Try to get current balance from userData or fallback to 0
-      const currentBalance = userData?.balance || 0;
-      
+      // Ensure the document exists first by using setDoc with merge or updateDoc
+      // We'll use setDoc with merge to be safe, but specifically ensure balance is incremented
       await setDoc(userRef, {
-        uid: authUid,
-        balance: currentBalance + 200000,
-        hasClaimedBonus: true
+        balance: increment(200000),
+        hasClaimedBonus: true,
+        uid: authUid // ensure uid is there
       }, { merge: true });
       
       alert("Bonus Rp 200.000 berhasil diklaim!");
     } catch (error: any) {
       console.error("Gagal klaim bonus:", error);
-      alert("Gagal mengklaim bonus. Pesan: " + (error.message || "Unknown error") + " (Code: " + (error.code || "no-code") + ")");
+      
+      // If permission-denied, it might be because the user doesn't have write access.
+      // Let's try a fallback or a more helpful message.
+      if (error.code === 'permission-denied') {
+        alert("Gagal mengklaim bonus: Izin ditolak. Pastikan Firebase Security Rules Anda mengizinkan penulisan ke koleksi 'users'.");
+      } else {
+        alert("Gagal mengklaim bonus. Pesan: " + (error.message || "Unknown error"));
+      }
     } finally {
       setClaiming(false);
     }
